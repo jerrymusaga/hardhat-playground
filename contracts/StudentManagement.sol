@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 contract StudentManagement {
     address owner;
+    uint256 public registrationFee = 0.01 ether;
 
     constructor() {
         owner = msg.sender;
@@ -17,21 +18,14 @@ contract StudentManagement {
 
     mapping (uint256 => string) name;
     mapping(uint8 => Student) students;
-
-    // Events
-    event CreatedStudent(
-        string indexed name,
-        string indexed class,
-        uint8 indexed age
-    );
-
-    
-
+    mapping(address => uint256) public payments;
+   
     struct Student {
         string name;
         uint8 age;
         string class;
         Gender gender;
+        address studentAddress;
     }
 
     uint8 studentId = 0;
@@ -43,22 +37,20 @@ contract StudentManagement {
         uint8 _age,
         string memory _class,
         Gender _gender
-    ) external onlyOwner {
-
+    ) public payable onlyOwner {
+        require(msg.value >= registrationFee, "Insufficient registration fee");
         Student memory student = Student({
             name: _name,
             age: _age,
             class: _class,
-            gender: _gender
+            gender: _gender,
+            studentAddress: msg.sender
         });
 
         
         studentId++;
         students[studentId] = student;
-
-        
-
-        emit CreatedStudent(_name, _class, _age);
+        payments[msg.sender] += msg.value;
     }
 
 
@@ -76,5 +68,31 @@ contract StudentManagement {
 
        students_;
     }
+
+    function getStudentFromName(string memory _name) public view returns (Student memory) {
+        for (uint8 i = 1; i <= studentId; i++) {
+            if (keccak256(bytes(students[i].name)) == keccak256(bytes(_name))) {
+                return students[i];
+            }
+        }
+        revert("Student not found");
+    }
+
+    function updateRegistrationFee(uint256 _newFee) external onlyOwner {
+        registrationFee = _newFee;
+    }
+
+    function withdrawFees() 
+        external 
+        onlyOwner 
+    {
+        uint256 schoolBalance = address(this).balance;
+        require(schoolBalance > 0, "No fees to withdraw");
+        
+        (bool success, ) = owner.call{value: schoolBalance}("");
+        require(success, "the school balance cannot be withdrawn cos it failed");
+    }
+
+     receive() external payable {}
    
 }
