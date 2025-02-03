@@ -37,7 +37,7 @@ contract StudentManagement {
         uint8 _age,
         string memory _class,
         Gender _gender
-    ) public payable onlyOwner {
+    ) public payable {
         require(msg.value >= registrationFee, "Insufficient registration fee");
         Student memory student = Student({
             name: _name,
